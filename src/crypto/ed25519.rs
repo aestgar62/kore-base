@@ -49,7 +49,7 @@ impl Creator for Ed25519KeyPair {
         let public_key = VerifyingKey::from(&sk);
         encrytion
             .encrypt(&sk.to_bytes())
-            .map_err(|_| Error::KeyPair("Ed25519".to_owned(), "mem encryption".to_owned()))?;
+            .map_err(|_| Error::KeyPair("Ed25519".to_owned(), "mem encryption".to_owned()))?; // grcov-excl-line
         Ok(Ed25519KeyPair {
             public: public_key,
             secret: Some(encrytion),
@@ -74,7 +74,7 @@ impl Signer for Ed25519KeyPair {
         ))?;
         let sk = encr
             .decrypt()
-            .map_err(|_| Error::KeyPair("Ed25519".to_owned(), "mem decryption".to_owned()))?;
+            .map_err(|_| Error::KeyPair("Ed25519".to_owned(), "mem decryption".to_owned()))?; // grcov-excl-line
 
         let signing_key = SigningKey::try_from(sk.as_ref()).map_err(|_| {
             Error::KeyPair("Ed25519".to_owned(), "SigningKey from slice".to_owned())
@@ -124,6 +124,8 @@ mod tests {
         key_pair.secret = Some(encrytion);
         let signature = key_pair.sign(message);
         assert!(signature.is_err());
-
+        key_pair.secret = None;
+        let signature = key_pair.sign(message);
+        assert!(signature.is_err());
     }
 }

@@ -23,10 +23,10 @@ use thiserror::Error;
 pub enum Error {
     /// Key pair error.
     #[error("Error key pair {0} -> {1}")]
-    KeyPair(String, String),
+    KeyPair(String, String), // grcov-excl-line
     /// Deserialize Error.
     #[error("Error deserialize {0}")]
-    Deserialize(String),
+    Deserialize(String), // grcov-excl-line
 }
 
 #[cfg(test)]
@@ -41,6 +41,6 @@ mod tests {
 
         let error = Error::Deserialize("a".to_owned());
         assert_eq!(error.to_string(), "Error deserialize a");
-        
+
     }
 }

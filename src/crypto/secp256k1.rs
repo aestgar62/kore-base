@@ -51,7 +51,7 @@ impl Creator for Secp256k1KeyPair {
         let public_key = VerifyingKey::from(&sk);
         encrytion
             .encrypt(&sk.to_bytes())
-            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "mem encryption".to_owned()))?;
+            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "mem encryption".to_owned()))?; // grcov-excl-line
 
         Ok(Secp256k1KeyPair {
             public: public_key,
@@ -128,6 +128,8 @@ mod tests {
         key_pair.secret = Some(encrytion);
         let signature = key_pair.sign(message);
         assert!(signature.is_err());
-
+        key_pair.secret = None;
+        let signature = key_pair.sign(message);
+        assert!(signature.is_err());
     }
 }
