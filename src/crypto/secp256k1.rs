@@ -77,7 +77,7 @@ impl Signer for Secp256k1KeyPair {
         ))?;
         let sk = encr
             .decrypt()
-            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "mem decryption".to_owned()))?;
+            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "mem decryption".to_owned()))?; // grcov-excl-line
         let signing_key = SigningKey::try_from(sk.as_ref()).map_err(|_| {
             Error::KeyPair("Secp256k1".to_owned(), "SigningKey from slice".to_owned())
         })?;
