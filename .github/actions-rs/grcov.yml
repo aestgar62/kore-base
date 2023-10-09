@@ -8,3 +8,4 @@ ignore:
   - "/*"
   - "C:/*"
   - "../*"
+excl-line: '*// grcov-excl-line'
