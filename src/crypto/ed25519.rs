@@ -116,5 +116,14 @@ mod tests {
         let mut key_pair = Ed25519KeyPair::from_secret(secret.as_bytes()).unwrap();
         let signature = key_pair.sign(message).unwrap();
         assert!(key_pair.verify(message, &signature).is_ok());
+        let key = "error";
+        let key_pair_err = Ed25519KeyPair::from_secret(key.as_bytes());
+        assert!(key_pair_err.is_err());
+        let mut encrytion = EncryptedMem::new();
+        encrytion.encrypt(b"error").unwrap();
+        key_pair.secret = Some(encrytion);
+        let signature = key_pair.sign(message);
+        assert!(signature.is_err());
+
     }
 }

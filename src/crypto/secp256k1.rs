@@ -109,6 +109,7 @@ impl Verifier for Secp256k1KeyPair {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -119,5 +120,14 @@ mod tests {
         let signature = key_pair.sign(message).unwrap();
         let result = key_pair.verify(message, &signature);
         assert!(result.is_ok());
+        let key = "error";
+        let key_pair_err = Secp256k1KeyPair::from_secret(key.as_bytes());
+        assert!(key_pair_err.is_err());
+        let mut encrytion = EncryptedMem::new();
+        encrytion.encrypt(b"error").unwrap();
+        key_pair.secret = Some(encrytion);
+        let signature = key_pair.sign(message);
+        assert!(signature.is_err());
+
     }
 }

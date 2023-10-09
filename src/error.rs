@@ -28,3 +28,19 @@ pub enum Error {
     #[error("Error deserialize {0}")]
     Deserialize(String),
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_error() {
+        let error = Error::KeyPair("a".to_owned(), "b".to_owned());
+        assert_eq!(error.to_string(), "Error key pair a -> b");
+
+        let error = Error::Deserialize("a".to_owned());
+        assert_eq!(error.to_string(), "Error deserialize a");
+        
+    }
+}
