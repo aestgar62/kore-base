@@ -12,19 +12,7 @@
 // or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! # Error module.
+//! # Digest identifier module.
+//! 
 
 #![warn(missing_docs)]
-
-use thiserror::Error;
-
-/// Error type.
-#[derive(Error, Debug)]
-pub enum Error {
-    /// Key pair error.
-    #[error("Error key pair {0} -> {1}")]
-    KeyPair(String, String),
-    /// Deserialize Error.
-    #[error("Error deserialize {0}")]
-    Deserialize(String),
-}

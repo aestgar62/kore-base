@@ -1,4 +1,4 @@
-// Copyright 2023 Antonio Estevez <aestevez@opencanarias.es>
+// Copyright 2023 Antonio Estevez <aestgar62@gmail.com>
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -158,11 +158,13 @@ mod tests {
         let signature = key_pair.sign(message).unwrap();
         let result = key_pair.verify(message, &signature);
         assert!(result.is_ok());
-
-        let mut key_pair =
-            KeyPair::Secp256k1(Secp256k1KeyPair::from_secret(key.as_bytes()).unwrap());
-        let signature = key_pair.sign(message).unwrap();
-        let result = key_pair.verify(message, &signature);
-        assert!(result.is_ok());
+        #[cfg(feature = "secp256k1")]
+        {
+            let mut key_pair =
+                KeyPair::Secp256k1(Secp256k1KeyPair::from_secret(key.as_bytes()).unwrap());
+            let signature = key_pair.sign(message).unwrap();
+            let result = key_pair.verify(message, &signature);
+            assert!(result.is_ok());
+        }
     }
 }

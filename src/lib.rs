@@ -16,8 +16,9 @@
 
 #![warn(missing_docs)]
 
-mod crypto;
 mod error;
+mod crypto;
+mod identifier;
 
 pub use error::Error;
 
