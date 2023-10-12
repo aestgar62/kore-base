@@ -23,13 +23,13 @@ use thiserror::Error;
 pub enum Error {
     /// Key pair error.
     #[error("Error key pair {0} -> {1}")]
-    KeyPair(String, String), // grcov-excl-line
+    KeyPair(String, String), // LCOV_EXCL_LINE
     /// Deserialize Error.
     #[error("Error deserialize {0}")]
-    Deserialize(String), // grcov-excl-line
+    Deserialize(String), // LCOV_EXCL_LINE
     /// Decode Error.
     #[error("Error decode {0} -> {1}")]
-    Decode(String, String), // grcov-excl-line
+    Decode(String, String), // LCOV_EXCL_LINE
 }
 
 #[cfg(test)]
