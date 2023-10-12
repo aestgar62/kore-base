@@ -19,6 +19,8 @@
 
 use crate::Error;
 
+use super::{SignatureIdentifier, KeyIdentifier};
+
 #[cfg(feature = "blake3")]
 use blake3;
 #[cfg(feature = "sha2")]
@@ -94,6 +96,20 @@ pub enum DigestDerivator {
     /// SHA3 512
     #[cfg(feature = "sha3")]
     SHA3_512,
+}
+
+impl Default for DigestDerivator {
+    fn default() -> Self {
+        #[cfg(feature = "blake3")]
+        return Self::Blake3_256;
+        #[cfg(not(feature = "blake3"))]
+        #[cfg(feature = "sha2")]
+        return Self::SHA2_256;
+        #[cfg(not(feature = "blake3"))]
+        #[cfg(not(feature = "sha2"))]
+        #[cfg(feature = "sha3")]
+        return Self::SHA3_256;
+    }
 }
 
 impl DigestDerivator {
@@ -263,6 +279,72 @@ pub enum KeyDerivator {
     /// The Secp256k1 key derivator.
     Secp256k1,
 }
+
+impl FromStr for KeyDerivator {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() == 0 {
+            return Err(Error::Deserialize("empty derivator".to_owned()));
+        }
+        match &s[..1] {
+            "E" => Ok(Self::Ed25519),
+            "S" => Ok(Self::Secp256k1),
+            _ => Err(Error::Deserialize("invalid derivator".to_owned())),
+        }
+    }
+}
+
+/// Enumeration with signature derivator types
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, BorshSerialize, BorshDeserialize, PartialOrd)]
+pub enum SignatureDerivator {
+    Ed25519Sha512,
+    ECDSAsecp256k1,
+}
+
+impl SignatureDerivator {
+    pub fn derive(&self, sign: &[u8]) -> SignatureIdentifier {
+        SignatureIdentifier::new(*self, sign)
+    }
+}
+
+impl Derivator for SignatureDerivator {
+    fn code_len(&self) -> usize {
+        match self {
+            Self::Ed25519Sha512 | Self::ECDSAsecp256k1 => 2,
+        }
+    }
+
+    fn derivative_len(&self) -> usize {
+        match self {
+            Self::Ed25519Sha512 | Self::ECDSAsecp256k1 => 86,
+        }
+    }
+
+    fn to_str(&self) -> String {
+        match self {
+            Self::Ed25519Sha512 => "SE",
+            Self::ECDSAsecp256k1 => "SS",
+        }
+        .into()
+    }
+}
+
+impl FromStr for SignatureDerivator {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &s[..1] {
+            "S" => match &s[1..2] {
+                "E" => Ok(Self::Ed25519Sha512),
+                "S" => Ok(Self::ECDSAsecp256k1),
+                _ => Err(Error::Decode("invalid derivator".to_owned(), s.to_owned())),
+            },
+            _ => Err(Error::Decode("invalid derivator".to_owned(), s.to_owned())),
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

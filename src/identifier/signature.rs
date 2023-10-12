@@ -12,87 +12,88 @@
 // or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! # Digest identifier module.
+//! # Signature identifier module.
 //! 
 
 #![warn(missing_docs)]
 
-use super::{DigestDerivator, Derivable, Derivator};
+use super::{Derivator, Derivable, SignatureDerivator};
 
 use crate::Error;
 
 use base64::{Engine as _, engine::general_purpose};
 use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::{
-    default::Default,
     fmt::{Formatter, Display},
     str::FromStr,
 };
 
-
-/// Digest based identifier
+/// Signature based identifier
 #[derive(Debug, PartialEq, Clone, Eq, Hash, BorshSerialize, BorshDeserialize, PartialOrd)]
-pub struct DigestIdentifier {
-    /// Derivator.
-    pub derivator: DigestDerivator,
-    /// Digest.
-    pub digest: Vec<u8>,
+pub struct SignatureIdentifier {
+    pub derivator: SignatureDerivator,
+    pub signature: Vec<u8>,
 }
 
-impl DigestIdentifier {
-    /// Nes digest identifier.
-    pub fn new(derivator: DigestDerivator, digest: &[u8]) -> Self {
+impl SignatureIdentifier {
+    pub fn new(derivator: SignatureDerivator, signature: &[u8]) -> Self {
         Self {
             derivator,
-            digest: digest.to_vec(),
-        }
-    }
-
-}
-
-impl Default for DigestIdentifier {
-    fn default() -> Self {
-        DigestIdentifier {
-            derivator: DigestDerivator::default(),
-            digest: Vec::new(),
+            signature: signature.to_vec(),
         }
     }
 }
 
-impl Derivable for DigestIdentifier {
+impl Derivable for SignatureIdentifier {
     fn derivative(&self) -> Vec<u8> {
-        self.digest.to_owned()
+        self.signature.to_owned()
     }
     fn derivation_code(&self) -> String {
         self.derivator.to_str()
     }
 }
 
-impl Display for DigestIdentifier {
+impl Display for SignatureIdentifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_str(),)
     }
 }
 
-/// From string to KeyIdentifier
-impl FromStr for DigestIdentifier {
+impl FromStr for SignatureIdentifier {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            return Ok(DigestIdentifier::default());
-        }
-        let code = DigestDerivator::from_str(s)?;
+        let code = SignatureDerivator::from_str(s)?;
         if s.len() == code.material_len() {
             Ok(Self::new(
                 code,
                 &general_purpose::URL_SAFE_NO_PAD.decode(&s[code.code_len()..code.material_len()])
-                    .map_err(|_| Error::Decode("base64".to_owned(), "invalid encode".to_owned()))?,
+                    .map_err(|_| Error::Decode("incorrect Signature:".to_owned(), s.to_owned()))?,
             ))
         } else {
-            Err(Error::Decode("DigestIdentifier".to_owned(), "invalid length".to_owned()))
+            Err(Error::Decode("incorrect Prefix Length:".to_owned(), s.len().to_string()))
         }
     }
 }
 
+impl Serialize for SignatureIdentifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for SignatureIdentifier {
+    fn deserialize<D>(deserializer: D) -> Result<SignatureIdentifier, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = <std::string::String as Deserialize>::deserialize(deserializer)?;
+
+        SignatureIdentifier::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}

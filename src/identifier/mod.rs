@@ -19,6 +19,45 @@
 
 mod derive;
 mod digest;
+mod key;
+mod signature;
 
-//use crate::Error;
+pub use derive::{Derivable, Derivator, DigestDerivator, KeyDerivator, SignatureDerivator};
+pub use digest::DigestIdentifier;
+pub use key::KeyIdentifier;
+pub use signature::SignatureIdentifier;
 
+use crate::Error;
+
+use std::str::FromStr;
+
+/// Enumeration of Identifier types
+#[derive(PartialEq, Debug, Clone, Eq, Hash)]
+pub(crate) enum Identifier {
+    /// Digest identifier.
+    Digest(DigestIdentifier),
+    Key(KeyIdentifier),
+    Signature(SignatureIdentifier),
+}
+
+impl Default for Identifier {
+    fn default() -> Self {
+        Identifier::Digest(DigestIdentifier::default())
+    }
+}
+
+impl FromStr for Identifier {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(id) = DigestIdentifier::from_str(s) {
+            Ok(Identifier::Digest(id))
+        } else if let Ok(id) = KeyIdentifier::from_str(s) {
+            Ok(Identifier::Key(id))
+        } else if let Ok(id) = SignatureIdentifier::from_str(s) {
+            Ok(Identifier::Signature(id))
+        } else {
+            Err(Error::Decode("incorrect Identifier:".to_owned(), s.to_owned()))
+        }
+    }
+}

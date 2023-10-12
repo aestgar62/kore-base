@@ -27,6 +27,9 @@ pub enum Error {
     /// Deserialize Error.
     #[error("Error deserialize {0}")]
     Deserialize(String), // grcov-excl-line
+    /// Decode Error.
+    #[error("Error decode {0} -> {1}")]
+    Decode(String, String), // grcov-excl-line
 }
 
 #[cfg(test)]
@@ -41,6 +44,9 @@ mod tests {
 
         let error = Error::Deserialize("a".to_owned());
         assert_eq!(error.to_string(), "Error deserialize a");
+
+        let error = Error::Decode("a".to_owned(), "b".to_owned());
+        assert_eq!(error.to_string(), "Error decode a -> b");
 
     }
 }

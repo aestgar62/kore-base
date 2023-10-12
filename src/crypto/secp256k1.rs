@@ -17,7 +17,7 @@
 
 #![warn(missing_docs)]
 
-use super::{BaseKeyPair, Creator, Signer, Verifier};
+use super::{BaseKeyPair, Creator, Signer, Verifier, KeyMaterial};
 
 use crate::Error;
 
@@ -58,8 +58,35 @@ impl Creator for Secp256k1KeyPair {
             secret: Some(encrytion),
         })
     }
+
+    /// Create a new key pair from a public key.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `public` - The public key.
+    /// 
+    /// # Returns
+    /// 
+    /// A new key pair.
+    /// 
+    fn from_public(public: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let public_key = VerifyingKey::from_sec1_bytes(public)
+            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "geting VerifyingKey".to_owned()))?;
+        Ok(Secp256k1KeyPair {
+            public: public_key,
+            secret: None,
+        })
+    }
 }
 
+impl KeyMaterial for Secp256k1KeyPair {
+    fn to_vec(&self) -> Vec<u8> {
+        self.public.to_sec1_bytes().to_vec()
+    }
+}
 impl Signer for Secp256k1KeyPair {
     /// Sign a message.
     ///
@@ -118,7 +145,9 @@ mod tests {
         let mut key_pair = Secp256k1KeyPair::from_secret(key.as_bytes()).unwrap();
         let message = b"Hello, world!";
         let signature = key_pair.sign(message).unwrap();
-        let result = key_pair.verify(message, &signature);
+        let public = key_pair.to_vec();
+        let kp = Secp256k1KeyPair::from_public(&public).unwrap();
+        let result = kp.verify(message, &signature);
         assert!(result.is_ok());
         let key = "error";
         let key_pair_err = Secp256k1KeyPair::from_secret(key.as_bytes());

@@ -17,7 +17,7 @@
 
 #![warn(missing_docs)]
 
-use super::{BaseKeyPair, Creator, Signer, Verifier};
+use super::{BaseKeyPair, Creator, Signer, Verifier, KeyMaterial};
 
 use crate::Error;
 
@@ -54,6 +54,34 @@ impl Creator for Ed25519KeyPair {
             public: public_key,
             secret: Some(encrytion),
         })
+    }
+
+    /// Create a new key pair from a public key.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `public` - The public key.
+    /// 
+    /// # Returns
+    /// 
+    /// A new key pair.
+    /// 
+    fn from_public(public: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let public_key = VerifyingKey::try_from(public)
+            .map_err(|_| Error::KeyPair("Ed25519".to_owned(), "geting VerifyingKey".to_owned()))?;
+        Ok(Ed25519KeyPair {
+            public: public_key,
+            secret: None,
+        })
+    }
+}
+
+impl KeyMaterial for Ed25519KeyPair {
+    fn to_vec(&self) -> Vec<u8> {
+        self.public.to_bytes().to_vec()
     }
 }
 
@@ -115,7 +143,9 @@ mod tests {
         let message = b"Hello world!";
         let mut key_pair = Ed25519KeyPair::from_secret(secret.as_bytes()).unwrap();
         let signature = key_pair.sign(message).unwrap();
-        assert!(key_pair.verify(message, &signature).is_ok());
+        let public_bytes = key_pair.to_vec();
+        let kp = Ed25519KeyPair::from_public(&public_bytes).unwrap();
+        assert!(kp.verify(message, &signature).is_ok());
         let key = "error";
         let key_pair_err = Ed25519KeyPair::from_secret(key.as_bytes());
         assert!(key_pair_err.is_err());
