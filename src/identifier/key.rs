@@ -13,14 +13,14 @@
 // permissions and limitations under the License.
 
 //! # Key identifier module.
-//! 
+//!
 
 #![warn(missing_docs)]
 
-use super::{KeyDerivator, Derivable, Derivator};
-use crate::Error;
+use super::{Derivable, Derivator, KeyDerivator, SignatureDerivator, SignatureIdentifier};
+use crate::{Error, crypto::{Ed25519KeyPair, Secp256k1KeyPair, Verifier, Creator, KeyMaterial}};
 
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -35,6 +35,70 @@ pub struct KeyIdentifier {
     pub public_key: Vec<u8>,
     /// Key derivcator.
     pub derivator: KeyDerivator,
+}
+
+/// KeyIdentifier implementation
+impl KeyIdentifier { 
+    /// New KeyIdentifier from public key and KeyDerivator.
+    pub fn new(derivator: KeyDerivator, pk: &[u8]) -> Self {
+        Self {
+            public_key: pk.to_vec(),
+            derivator,
+        }
+    }
+
+    pub fn verify(&self, data: &[u8], signature: &SignatureIdentifier) -> Result<(), Error> {
+        match self.derivator {
+            KeyDerivator::Ed25519 => {
+                let kp = Ed25519KeyPair::from_public(&self.public_key)
+                    .map_err(|_| Error::KeyPair(self.derivator.to_str(),"Wrong public key".to_owned()))?;
+                match signature.derivator {
+                    SignatureDerivator::Ed25519Sha512 => {
+                        kp.verify(data, &signature.signature)
+                    }
+                    _ => Err(Error::Signature("Wrong signature type".to_owned())),
+                }
+            }
+            KeyDerivator::Secp256k1 => {
+                let kp = Secp256k1KeyPair::from_public(&self.public_key)
+                    .map_err(|_| Error::KeyPair(self.derivator.to_str(),"Wrong public key".to_owned()))?;
+                match signature.derivator {
+                    SignatureDerivator::ECDSAsecp256k1 => {
+                        kp.verify(data, &signature.signature)
+                    }
+                    _ => Err(Error::Signature("Wrong signature type".to_owned())),
+                }
+            }
+        }
+    }
+}
+
+impl From<Ed25519KeyPair> for KeyIdentifier {
+    fn from(key_pair: Ed25519KeyPair) -> Self {
+        Self {
+            public_key: key_pair.to_vec(),
+            derivator: KeyDerivator::Ed25519,
+        }
+    }
+}
+
+impl From<Secp256k1KeyPair> for KeyIdentifier {
+    fn from(key_pair: Secp256k1KeyPair) -> Self {
+        Self {
+            public_key: key_pair.to_vec(),
+            derivator: KeyDerivator::Secp256k1,
+        }
+    }
+}
+
+impl From<KeyIdentifier> for SignatureDerivator {
+
+    fn from(key_identifier: KeyIdentifier) -> Self {
+        match key_identifier.derivator {
+            KeyDerivator::Ed25519 => SignatureDerivator::Ed25519Sha512,
+            KeyDerivator::Secp256k1 => SignatureDerivator::ECDSAsecp256k1,
+        }
+    }
 }
 
 /// Partial equal for KeyIdentifier
@@ -84,7 +148,6 @@ impl Derivator for KeyDerivator {
     }
 }
 
-
 /// From string to KeyIdentifier
 impl FromStr for KeyIdentifier {
     type Err = Error;
@@ -100,7 +163,10 @@ impl FromStr for KeyIdentifier {
                 public_key: k_vec,
             })
         } else {
-            Err(Error::Decode("incorrect Identifier Length".to_owned(), s.to_owned()))
+            Err(Error::Decode(
+                "incorrect Identifier Length".to_owned(),
+                s.to_owned(),
+            ))
         }
     }
 }
@@ -132,12 +198,13 @@ mod tests {
 
     use super::*;
 
-    use crate::crypto::{Ed25519KeyPair, Creator, KeyMaterial};
+    use crate::crypto::{Creator, Ed25519KeyPair, Signer, KeyMaterial};
 
     #[test]
     fn test_key_identifier() {
         let secret = "0123456789abcdef0123456789abcdef";
-        let key_pair = Ed25519KeyPair::from_secret(secret.as_bytes()).unwrap();
+        let mut key_pair = Ed25519KeyPair::from_secret(secret.as_bytes()).unwrap();
+        let signature = key_pair.sign(b"test").unwrap();
         let key_identifier = KeyIdentifier {
             public_key: key_pair.to_vec(),
             derivator: KeyDerivator::Ed25519,
@@ -145,6 +212,7 @@ mod tests {
         let key_identifier_str = key_identifier.to_str();
         let key_identifier2 = KeyIdentifier::from_str(&key_identifier_str).unwrap();
         assert_eq!(key_identifier, key_identifier2);
-
+        let sig = SignatureIdentifier::new(SignatureDerivator::Ed25519Sha512, &signature);
+        assert!(key_identifier.verify(b"test", &sig).is_ok());
     }
 }

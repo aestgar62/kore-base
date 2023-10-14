@@ -17,7 +17,7 @@
 
 #![warn(missing_docs)]
 
-use super::{BaseKeyPair, Creator, Signer, Verifier, KeyMaterial};
+use super::{BaseKeyPair, Creator, KeyMaterial, Signer, Verifier};
 
 use crate::Error;
 
@@ -57,15 +57,15 @@ impl Creator for Ed25519KeyPair {
     }
 
     /// Create a new key pair from a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `public` - The public key.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new key pair.
-    /// 
+    ///
     fn from_public(public: &[u8]) -> Result<Self, Error>
     where
         Self: Sized,

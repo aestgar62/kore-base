@@ -17,7 +17,7 @@
 
 #![warn(missing_docs)]
 
-use super::{BaseKeyPair, Creator, Signer, Verifier, KeyMaterial};
+use super::{BaseKeyPair, Creator, KeyMaterial, Signer, Verifier};
 
 use crate::Error;
 
@@ -60,21 +60,22 @@ impl Creator for Secp256k1KeyPair {
     }
 
     /// Create a new key pair from a public key.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `public` - The public key.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new key pair.
-    /// 
+    ///
     fn from_public(public: &[u8]) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        let public_key = VerifyingKey::from_sec1_bytes(public)
-            .map_err(|_| Error::KeyPair("Secp256k1".to_owned(), "geting VerifyingKey".to_owned()))?;
+        let public_key = VerifyingKey::from_sec1_bytes(public).map_err(|_| {
+            Error::KeyPair("Secp256k1".to_owned(), "geting VerifyingKey".to_owned())
+        })?;
         Ok(Secp256k1KeyPair {
             public: public_key,
             secret: None,

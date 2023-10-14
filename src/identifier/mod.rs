@@ -13,7 +13,7 @@
 // permissions and limitations under the License.
 
 //! # Identifiers module.
-//! 
+//!
 
 #![warn(missing_docs)]
 
@@ -57,7 +57,10 @@ impl FromStr for Identifier {
         } else if let Ok(id) = SignatureIdentifier::from_str(s) {
             Ok(Identifier::Signature(id))
         } else {
-            Err(Error::Decode("incorrect Identifier:".to_owned(), s.to_owned()))
+            Err(Error::Decode(
+                "incorrect Identifier:".to_owned(),
+                s.to_owned(),
+            ))
         }
     }
 }

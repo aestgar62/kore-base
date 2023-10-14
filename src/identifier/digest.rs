@@ -13,23 +13,22 @@
 // permissions and limitations under the License.
 
 //! # Digest identifier module.
-//! 
+//!
 
 #![warn(missing_docs)]
 
-use super::{DigestDerivator, Derivable, Derivator};
+use super::{Derivable, Derivator, DigestDerivator};
 
 use crate::Error;
 
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use std::{
     default::Default,
-    fmt::{Formatter, Display},
+    fmt::{Display, Formatter},
     str::FromStr,
 };
-
 
 /// Digest based identifier
 #[derive(Debug, PartialEq, Clone, Eq, Hash, BorshSerialize, BorshDeserialize, PartialOrd)]
@@ -48,7 +47,6 @@ impl DigestIdentifier {
             digest: digest.to_vec(),
         }
     }
-
 }
 
 impl Default for DigestIdentifier {
@@ -87,12 +85,15 @@ impl FromStr for DigestIdentifier {
         if s.len() == code.material_len() {
             Ok(Self::new(
                 code,
-                &general_purpose::URL_SAFE_NO_PAD.decode(&s[code.code_len()..code.material_len()])
+                &general_purpose::URL_SAFE_NO_PAD
+                    .decode(&s[code.code_len()..code.material_len()])
                     .map_err(|_| Error::Decode("base64".to_owned(), "invalid encode".to_owned()))?,
             ))
         } else {
-            Err(Error::Decode("DigestIdentifier".to_owned(), "invalid length".to_owned()))
+            Err(Error::Decode(
+                "DigestIdentifier".to_owned(),
+                "invalid length".to_owned(),
+            ))
         }
     }
 }
-

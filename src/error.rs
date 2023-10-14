@@ -24,6 +24,9 @@ pub enum Error {
     /// Key pair error.
     #[error("Error key pair {0} -> {1}")]
     KeyPair(String, String), // LCOV_EXCL_LINE
+    /// Signature error.
+    #[error("Error signature {0}")]
+    Signature(String), // LCOV_EXCL_LINE
     /// Deserialize Error.
     #[error("Error deserialize {0}")]
     Deserialize(String), // LCOV_EXCL_LINE
@@ -42,11 +45,13 @@ mod tests {
         let error = Error::KeyPair("a".to_owned(), "b".to_owned());
         assert_eq!(error.to_string(), "Error key pair a -> b");
 
+        let error = Error::Signature("a".to_owned());
+        assert_eq!(error.to_string(), "Error signature a");
+
         let error = Error::Deserialize("a".to_owned());
         assert_eq!(error.to_string(), "Error deserialize a");
 
         let error = Error::Decode("a".to_owned(), "b".to_owned());
         assert_eq!(error.to_string(), "Error decode a -> b");
-
     }
 }

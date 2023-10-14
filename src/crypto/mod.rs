@@ -114,15 +114,15 @@ pub trait Creator {
     fn from_secret(secret: &[u8]) -> Result<Self, Error>
     where
         Self: Sized;
-    
+
     /// Create a new key pair from a public bytes.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `public` - The public key.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new key pair.
     fn from_public(public: &[u8]) -> Result<Self, Error>
     where

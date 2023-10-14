@@ -13,20 +13,20 @@
 // permissions and limitations under the License.
 
 //! # Signature identifier module.
-//! 
+//!
 
 #![warn(missing_docs)]
 
-use super::{Derivator, Derivable, SignatureDerivator};
+use super::{Derivable, Derivator, SignatureDerivator};
 
 use crate::Error;
 
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::{
-    fmt::{Formatter, Display},
+    fmt::{Display, Formatter},
     str::FromStr,
 };
 
@@ -69,11 +69,15 @@ impl FromStr for SignatureIdentifier {
         if s.len() == code.material_len() {
             Ok(Self::new(
                 code,
-                &general_purpose::URL_SAFE_NO_PAD.decode(&s[code.code_len()..code.material_len()])
+                &general_purpose::URL_SAFE_NO_PAD
+                    .decode(&s[code.code_len()..code.material_len()])
                     .map_err(|_| Error::Decode("incorrect Signature:".to_owned(), s.to_owned()))?,
             ))
         } else {
-            Err(Error::Decode("incorrect Prefix Length:".to_owned(), s.len().to_string()))
+            Err(Error::Decode(
+                "incorrect Prefix Length:".to_owned(),
+                s.len().to_string(),
+            ))
         }
     }
 }
@@ -95,5 +99,39 @@ impl<'de> Deserialize<'de> for SignatureIdentifier {
         let s = <std::string::String as Deserialize>::deserialize(deserializer)?;
 
         SignatureIdentifier::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    use crate::crypto::{Creator, Ed25519KeyPair, Secp256k1KeyPair, Verifier, Signer};
+
+    #[test]
+    fn test_signature() {
+        let secret = "0123456789abcdef0123456789abcdef";
+        let message = "test message";
+        let mut kp = Ed25519KeyPair::from_secret(secret.as_bytes()).unwrap();
+        let sig = kp.sign(message.as_bytes()).unwrap();
+        let id = SignatureIdentifier::new(SignatureDerivator::Ed25519Sha512, &sig);
+        assert_eq!(id.derivator, SignatureDerivator::Ed25519Sha512);
+        let sig_str = "SERwVEryPQBCsphRO2ybI7lfO7RvPt_jnbHlRqI0EsRGwesLVM30kwto4Xr4Zeo3Q4fv14B8BDkOek2aHWhj7oDg";
+        assert_eq!(id.to_str(), sig_str);
+        let id2 = SignatureIdentifier::from_str(sig_str).unwrap();
+        assert_eq!(id, id2);
+        let result = kp.verify(message.as_bytes(), id2.derivative().as_slice());
+        assert!(result.is_ok());
+        let mut kp = Secp256k1KeyPair::from_secret(secret.as_bytes()).unwrap();
+        let sig = kp.sign(message.as_bytes()).unwrap();
+        let id = SignatureIdentifier::new(SignatureDerivator::ECDSAsecp256k1, &sig);
+        assert_eq!(id.derivator, SignatureDerivator::ECDSAsecp256k1);
+        let sig_str = "SSMoCSP1ZLh1gQoR9MCdbjoMKwJzg_19rT_WOUCwDKjSYk-H-nPdHvLOBl7DFY7BRFD0Q2WgR7lM8Ygop3e32YJA";
+        assert_eq!(id.to_str(), sig_str);
+        let id2 = SignatureIdentifier::from_str(sig_str).unwrap();
+        assert_eq!(id, id2);
+        let result = kp.verify(message.as_bytes(), id2.derivative().as_slice());
+        assert!(result.is_ok());
     }
 }

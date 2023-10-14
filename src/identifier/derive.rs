@@ -13,30 +13,30 @@
 // permissions and limitations under the License.
 
 //! # Derive identifier module.
-//! 
+//!
 
 #![warn(missing_docs)]
 
 use crate::Error;
 
-use super::{SignatureIdentifier, KeyIdentifier};
+use super::{KeyIdentifier, SignatureIdentifier};
+
+use base64::{engine::general_purpose, Engine as _};
+use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "blake3")]
 use blake3;
 #[cfg(feature = "sha2")]
-use sha2::{Sha256, Sha512, Digest};
+use sha2::{Digest, Sha256, Sha512};
 #[cfg(feature = "sha3")]
 use sha3::{Sha3_256, Sha3_512};
-use base64::{Engine as _, engine::general_purpose};
-use serde::{Deserialize, Serialize};
-use borsh::{BorshSerialize, BorshDeserialize};
 
 use std::str::FromStr;
 
 /// Derivable Identifiers
 pub trait Derivable: FromStr<Err = Error> {
-	
-	/// Derivative value.
+    /// Derivative value.
     fn derivative(&self) -> Vec<u8>;
 
     fn derivation_code(&self) -> String;
@@ -258,7 +258,6 @@ fn sha3_512_digest(input: &[u8]) -> Vec<u8> {
     h.finalize().to_vec()
 }
 
-
 /// An enumeration of key derivator types.
 #[derive(
     Debug,
@@ -278,6 +277,22 @@ pub enum KeyDerivator {
     Ed25519,
     /// The Secp256k1 key derivator.
     Secp256k1,
+}
+
+impl KeyDerivator {
+    /// Derive a key identifier from a public key bytes.
+    pub fn derive(&self, public_key: &[u8]) -> KeyIdentifier {
+        KeyIdentifier::new(*self, public_key)
+    }
+}
+
+impl From<KeyDerivator> for SignatureDerivator {
+    fn from(derivator: KeyDerivator) -> Self {
+        match derivator {
+            KeyDerivator::Ed25519 => SignatureDerivator::Ed25519Sha512,
+            KeyDerivator::Secp256k1 => SignatureDerivator::ECDSAsecp256k1,
+        }
+    }
 }
 
 impl FromStr for KeyDerivator {
@@ -345,7 +360,6 @@ impl FromStr for SignatureDerivator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
 
@@ -361,8 +375,10 @@ mod tests {
         assert_eq!(derivator.to_str(), "J");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result = vec![92, 167, 129, 90, 220, 180, 132, 233, 161, 54, 193, 30, 254, 105, 193,
-         213, 48, 23, 109, 84, 155, 93, 24, 208, 56, 235, 82, 128, 180, 179, 71, 12];
+        let result = vec![
+            92, 167, 129, 90, 220, 180, 132, 233, 161, 54, 193, 30, 254, 105, 193, 213, 48, 23,
+            109, 84, 155, 93, 24, 208, 56, 235, 82, 128, 180, 179, 71, 12,
+        ];
         assert_eq!(digest, result);
     }
 
@@ -376,10 +392,12 @@ mod tests {
         assert_eq!(derivator.to_str(), "0J");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result = vec![92, 167, 129, 90, 220, 180, 132, 233, 161, 54, 193, 30, 254, 105, 193,
-         213, 48, 23, 109, 84, 155, 93, 24, 208, 56, 235, 82, 128, 180, 179, 71, 12, 221, 177, 116,
-         107, 35, 71, 4, 151, 8, 51, 84, 183, 156, 64, 131, 31, 51, 228, 133, 151, 149, 30, 112, 72, 35,
-         134, 121, 18, 3, 150, 98, 90];
+        let result = vec![
+            92, 167, 129, 90, 220, 180, 132, 233, 161, 54, 193, 30, 254, 105, 193, 213, 48, 23,
+            109, 84, 155, 93, 24, 208, 56, 235, 82, 128, 180, 179, 71, 12, 221, 177, 116, 107, 35,
+            71, 4, 151, 8, 51, 84, 183, 156, 64, 131, 31, 51, 228, 133, 151, 149, 30, 112, 72, 35,
+            134, 121, 18, 3, 150, 98, 90,
+        ];
         assert_eq!(digest, result);
     }
 
@@ -393,8 +411,10 @@ mod tests {
         assert_eq!(derivator.to_str(), "L");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result = [127, 131, 177, 101, 127, 241, 252, 83, 185, 45, 193, 129, 72, 161, 214, 93,
-         252, 45, 75, 31, 163, 214, 119, 40, 74, 221, 210, 0, 18, 109, 144, 105];
+        let result = [
+            127, 131, 177, 101, 127, 241, 252, 83, 185, 45, 193, 129, 72, 161, 214, 93, 252, 45,
+            75, 31, 163, 214, 119, 40, 74, 221, 210, 0, 18, 109, 144, 105,
+        ];
         assert_eq!(digest, result);
     }
 
@@ -408,11 +428,13 @@ mod tests {
         assert_eq!(derivator.to_str(), "0L");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result =[134, 24, 68, 214, 112, 78, 133, 115, 254, 195, 77, 150, 126, 32, 188, 254,
-         243, 212, 36, 207, 72, 190, 4, 230, 220, 8, 242, 189, 88, 199, 41, 116, 51, 113, 1, 94, 173, 137,
-         28, 195, 207, 28, 157, 52, 180, 146, 100, 181, 16, 117, 27, 31, 249, 229, 55, 147, 123, 196, 107,
-         93, 111, 244, 236, 200];
-        assert_eq!(digest, result); 
+        let result = [
+            134, 24, 68, 214, 112, 78, 133, 115, 254, 195, 77, 150, 126, 32, 188, 254, 243, 212,
+            36, 207, 72, 190, 4, 230, 220, 8, 242, 189, 88, 199, 41, 116, 51, 113, 1, 94, 173, 137,
+            28, 195, 207, 28, 157, 52, 180, 146, 100, 181, 16, 117, 27, 31, 249, 229, 55, 147, 123,
+            196, 107, 93, 111, 244, 236, 200,
+        ];
+        assert_eq!(digest, result);
     }
 
     #[test]
@@ -425,8 +447,10 @@ mod tests {
         assert_eq!(derivator.to_str(), "M");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result = vec![208, 228, 116, 134, 187, 244, 193, 106, 202, 194, 111, 139, 101, 53,
-         146, 151, 60, 19, 98, 144, 159, 144, 38, 40, 119, 8, 159, 156, 138, 69, 54, 175];
+        let result = vec![
+            208, 228, 116, 134, 187, 244, 193, 106, 202, 194, 111, 139, 101, 53, 146, 151, 60, 19,
+            98, 144, 159, 144, 38, 40, 119, 8, 159, 156, 138, 69, 54, 175,
+        ];
         assert_eq!(digest, result);
     }
 
@@ -440,10 +464,12 @@ mod tests {
         assert_eq!(derivator.to_str(), "0M");
         let data = "Hello World!";
         let digest = derivator.digest(data.as_bytes());
-        let result = vec![50, 64, 11, 94, 137, 130, 45, 226, 84, 232, 213, 217, 66, 82, 197, 43, 220,
-         178, 122, 53, 98, 202, 89, 62, 152, 3, 100, 217, 132, 139, 128, 65, 185, 142, 171, 225, 108, 26, 103,
-         151, 72, 73, 65, 210, 55, 104, 100, 161, 176, 226, 72, 176, 247, 175, 139, 21, 85, 167, 120, 195, 54, 165, 191, 72];
+        let result = vec![
+            50, 64, 11, 94, 137, 130, 45, 226, 84, 232, 213, 217, 66, 82, 197, 43, 220, 178, 122,
+            53, 98, 202, 89, 62, 152, 3, 100, 217, 132, 139, 128, 65, 185, 142, 171, 225, 108, 26,
+            103, 151, 72, 73, 65, 210, 55, 104, 100, 161, 176, 226, 72, 176, 247, 175, 139, 21, 85,
+            167, 120, 195, 54, 165, 191, 72,
+        ];
         assert_eq!(digest, result);
     }
-
 }
